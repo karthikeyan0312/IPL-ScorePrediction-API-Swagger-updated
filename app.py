@@ -5,19 +5,9 @@ from flask import Flask, jsonify,json
 from flasgger import Swagger
 from flask_restful import Api, Resource,request
 from flasgger.utils import swag_from
-import gc
-from cachetools import cached, TTLCache
-import os
-
-#to get the current working directory
-directory = os.path.dirname(os.path.realpath(__file__))
-
-print(directory)
-
 
 app = Flask(__name__)
 api = Api(app)
-cache = TTLCache(maxsize=100, ttl=100)
 
 swagger_config = {
     "headers": [],
@@ -56,10 +46,7 @@ template = {
 
 swagger = Swagger(app,config=swagger_config,template=template)
 
-@cached(cache)
 def load_model():
-  
-
     with gzip.open(r"/opt/render/project/src/model/model.pickle.gz", "rb") as f:
         model = pk.load(f)
 
@@ -74,13 +61,13 @@ def load_model():
     return model,scaler,columns,list(teams.keys()), list(columns[7:]) + ["Barabati Stadium"]
 
 
-
+model,scaler,columns,teams, venues = load_model()
+teams.sort()
+venues.sort()
 
 def predict_score(overs, wickets, runs, wickets_last_5, runs_last_5, bat_team, bowl_team, venue):
     try:
-        model,scaler,columns,teams, venues = load_model()
-        teams.sort()
-        venues.sort()
+        
         X_pred = np.zeros(columns.size)
 
         X_pred[0:7] = [overs, wickets, runs, wickets_last_5, runs_last_5, teams.index(bat_team), teams.index(bowl_team)]
@@ -93,13 +80,9 @@ def predict_score(overs, wickets, runs, wickets_last_5, runs_last_5, bat_team, b
         X_pred = scaler.transform([X_pred])
 
         result = model.predict(X_pred)[0]
-
-        del model,scaler
-
+        
         return result
     except Exception as e:
-        print(e)
-        print(directory)
         return 1 # error code 1
 
 class Randomforest(Resource):
@@ -117,9 +100,7 @@ class Randomforest(Resource):
         bowling_team = data["bowling_team"]
         venue = data["venue"]
         score =  int(predict_score(over, wickets, runs, last_5_over_wickets, last_5_over_runs, batting_team, bowling_team, venue))
-        del data
-        gc.collect()
-        cache.clear()
+        
         return jsonify({"score": score})
 
 api.add_resource(Randomforest, '/v1/model')
@@ -127,5 +108,5 @@ api.add_resource(Randomforest, '/v1/model')
 if __name__ == "__main__":
     #print(predict_score(7, 0, 52, 0, 24, "Sunrisers Hyderabad", "Delhi Capitals", "Sheikh Zayed Stadium"))
     
-    app.run(debug=True)
+    app.run()
     
