@@ -1,7 +1,6 @@
 pickle-mixin
 flask
 flask_restful
-cachetools
 flasgger
 gunicorn
 numpy
