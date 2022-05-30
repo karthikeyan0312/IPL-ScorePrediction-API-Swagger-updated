@@ -5,3 +5,6 @@ flasgger
 gunicorn
 numpy
 scikit-learn
+flask-cors
+flask-swagger
+flask-swagger-ui
