@@ -5,9 +5,17 @@ from flask import Flask, jsonify,json
 from flasgger import Swagger
 from flask_restful import Api, Resource,request
 from flasgger.utils import swag_from
+import os
+from flask_cors import CORS
+from flask_cors import cross_origin
+
 
 app = Flask(__name__)
+CORS(app, resources={r"/v1/*": {"origins": "*"}})
 api = Api(app)
+
+#to get the current working directory
+directory = os.path.dirname(os.path.realpath(__file__))
 
 swagger_config = {
     "headers": [],
@@ -33,7 +41,7 @@ template = {
       "responsibleOrganization": "ME",
       "responsibleDeveloper": "Me",
       "email": "me@me.com",
-      "url": "www.me.com",
+      "url": "https://cricket-score-prediction-54248.web.app",
     },
     "termsOfService": "http://me.com/terms",
     "version": "1.1.0"
@@ -76,6 +84,7 @@ def predict_score(overs, wickets, runs, wickets_last_5, runs_last_5, bat_team, b
             # because i removed first columns for prevent dummy variable trap
             # and first column of venue was Barabati Stadium
             venue_index = np.where(columns == venue)[0][0]
+            X_pred[venue_pos] = 1
 
         X_pred = scaler.transform([X_pred])
 
@@ -86,7 +95,8 @@ def predict_score(overs, wickets, runs, wickets_last_5, runs_last_5, bat_team, b
         return 1 # error code 1
 
 class Randomforest(Resource):
-    @swag_from("swagger_config.yml")
+    @swag_from(directory +"/swagger_config.yml")
+    @cross_origin()
     def post(self):
 
         data = json.loads(request.get_data())
@@ -108,7 +118,8 @@ class Randomforest(Resource):
         
         return jsonify({"score": score})
     
-    @swag_from("swagger_config2.yml")
+    @swag_from(directory +"/swagger_config2.yml")
+    @cross_origin()
     def get(self):
         req=request.args.to_dict()["model_details"]
         data=None
